@@ -8,6 +8,7 @@ import pytest
 
 from src.config.experiment import ExperimentConfig
 from src.config.loader import load_experiment_config
+from src.constants.models import TransferLearningStrategy
 
 
 def test_load_experiment_config(
@@ -49,7 +50,7 @@ evaluation:
     assert config.dataset.name == "FERPlus"
     assert config.dataset.num_classes == 8
 
-    assert config.model.strategy == "full_finetuning"
+    assert config.model.strategy == TransferLearningStrategy.FULL_FINETUNING
 
     assert config.training.epochs == 100
     assert config.training.batch_size == 64
