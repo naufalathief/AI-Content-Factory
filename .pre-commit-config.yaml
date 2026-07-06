@@ -12,7 +12,8 @@ repos:
     rev: v1.14.1
     hooks:
       - id: mypy
-        additional_dependencies: []
+        additional_dependencies:
+          - types-PyYAML
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

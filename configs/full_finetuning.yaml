@@ -1,0 +1,29 @@
+experiment:
+  name: mobilenetv2_full_finetuning
+
+
+dataset:
+  name: FER2013
+  image_size: 224
+  num_classes: 7
+
+
+model:
+  backbone: mobilenet_v2
+  strategy: full_finetuning
+  pretrained: true
+
+
+training:
+  epochs: 50
+  batch_size: 32
+  learning_rate: 0.00001
+  optimizer: adam
+
+
+evaluation:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
