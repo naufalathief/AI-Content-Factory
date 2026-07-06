@@ -2,6 +2,7 @@
 Unit tests for the path configuration module.
 """
 
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
@@ -71,11 +72,11 @@ def test_create_directories() -> None:
     assert paths.tables_dir.exists()
 
 
-def test_path_settings_are_immutable() -> None:
+def test_path_settings_immutable() -> None:
     """
     PathSettings should be immutable.
     """
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         paths.project_root = Path.cwd()  # type: ignore[misc]
 
 

@@ -12,13 +12,6 @@ from typing import Any
 
 import yaml
 
-from src.constants.datasets import DatasetName
-from src.constants.metrics import MetricName
-from src.constants.models import (
-    BackboneName,
-    TransferLearningStrategy,
-)
-from src.constants.training import OptimizerName
 from src.config.experiment import (
     DatasetConfig,
     EvaluationConfig,
@@ -26,6 +19,13 @@ from src.config.experiment import (
     ModelConfig,
     TrainingConfig,
 )
+from src.constants.datasets import DatasetName
+from src.constants.metrics import MetricName
+from src.constants.models import (
+    BackboneName,
+    TransferLearningStrategy,
+)
+from src.constants.training import OptimizerName
 
 
 def load_experiment_config(config_path: Path) -> ExperimentConfig:

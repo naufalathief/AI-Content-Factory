@@ -26,5 +26,5 @@ class TransferLearningStrategy(StrEnum):
     """
 
     FEATURE_EXTRACTION = "feature_extraction"
-    PARTIAL_FINETUNING = "partial_finetuning"
-    FULL_FINETUNING = "full_finetuning"
+    PARTIAL_FINE_TUNING = "partial_finetuning"
+    FULL_FINE_TUNING = "full_finetuning"

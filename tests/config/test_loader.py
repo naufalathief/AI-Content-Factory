@@ -50,7 +50,7 @@ evaluation:
     assert config.dataset.name == "FERPlus"
     assert config.dataset.num_classes == 8
 
-    assert config.model.strategy == TransferLearningStrategy.FULL_FINETUNING
+    assert config.model.strategy == TransferLearningStrategy.FULL_FINE_TUNING
 
     assert config.training.epochs == 100
     assert config.training.batch_size == 64
