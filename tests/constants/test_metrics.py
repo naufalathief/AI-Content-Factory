@@ -10,11 +10,11 @@ def test_metric_names() -> None:
     Metric constants should have correct values.
     """
 
-    assert MetricName.ACCURACY == "accuracy"
-    assert MetricName.PRECISION == "precision"
-    assert MetricName.RECALL == "recall"
-    assert MetricName.F1_SCORE == "f1_score"
-    assert MetricName.CONFUSION_MATRIX == "confusion_matrix"
+    assert MetricName.ACCURACY.value == "accuracy"
+    assert MetricName.PRECISION.value == "precision"
+    assert MetricName.RECALL.value == "recall"
+    assert MetricName.F1_SCORE.value == "f1_score"
+    assert MetricName.CONFUSION_MATRIX.value == "confusion_matrix"
 
 
 def test_number_of_metrics() -> None:
