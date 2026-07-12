@@ -1,0 +1,5 @@
+file '/workspaces/AI-Content-Factory/storage/assets/1/temp/000.mp4'
+file '/workspaces/AI-Content-Factory/storage/assets/1/temp/001.mp4'
+file '/workspaces/AI-Content-Factory/storage/assets/1/temp/002.mp4'
+file '/workspaces/AI-Content-Factory/storage/assets/1/temp/003.mp4'
+file '/workspaces/AI-Content-Factory/storage/assets/1/temp/004.mp4'
