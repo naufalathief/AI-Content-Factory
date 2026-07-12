@@ -2,12 +2,13 @@ services:
   postgres:
     image: postgres:17
     container_name: ai-content-factory-db
+
     restart: unless-stopped
 
     environment:
-      POSTGRES_DB: ai_content_factory
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: content_factory
+      POSTGRES_USER: acf_user
+      POSTGRES_PASSWORD: acf_pass
 
     ports:
       - "5432:5432"
