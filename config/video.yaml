@@ -1,0 +1,18 @@
+video:
+  width: 1920
+  height: 1080
+  fps: 30
+
+effects:
+  transition: fade
+  transition_duration: 0.5
+
+  zoom:
+    enabled: true
+    speed: 0.0008
+
+  pan:
+    enabled: true
+
+  fade:
+    enabled: true
