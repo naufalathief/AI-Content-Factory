@@ -1,15 +1,7 @@
-import os
+from app.script_generator import generate_script
 
-from dotenv import load_dotenv
-from google import genai
+script = generate_script("AI Terbaik untuk Mahasiswa")
 
-load_dotenv()
+print(type(script))
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
-response = client.models.generate_content(
-    model="gemini-3.5-flash",
-    contents="Say hello in Indonesian."
-)
-
-print(response.text)
+print(script.keys())
