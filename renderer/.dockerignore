@@ -1,0 +1,7 @@
+node_modules
+npm-debug.log
+dist
+out
+output.mp4
+.git
+.vscode

@@ -4,7 +4,7 @@ import os
 from app.db import get_db
 from app.models import Video
 from app.schemas import Script
-from app.voice_generator import generate_voice
+from app.generators.voice_generator import generate_voice
 
 
 def run(video_id: int):

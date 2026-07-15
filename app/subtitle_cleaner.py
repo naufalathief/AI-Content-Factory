@@ -1,65 +1,51 @@
-import re
+from pathlib import Path
 
 
-REPLACEMENTS = {
-    " air ": " AI ",
-    " Air ": " AI ",
-    " ai ": " AI ",
-    " reset ": " riset ",
-    " Reset ": " Riset ",
-    " open eye ": " OpenAI ",
-    " Open Eye ": " OpenAI ",
-    " cloud ": " Claude ",
-    " Cloud ": " Claude ",
-    " germany ": " Gemini ",
-    " Germany ": " Gemini ",
-}
+def clean_srt(
+    input_path: str,
+    output_path: str,
+) -> None:
 
+    source = Path(input_path)
 
-def clean_text(text: str) -> str:
-    text = f" {text} "
+    if not source.exists():
+        raise FileNotFoundError(source)
 
-    for wrong, correct in REPLACEMENTS.items():
-        text = text.replace(wrong, correct)
+    cleaned_lines = []
 
-    text = re.sub(r"\s+", " ", text)
-
-    return text.strip()
-
-
-def clean_srt(input_file: str, output_file: str):
     with open(
-        input_file,
+        source,
         "r",
         encoding="utf-8",
     ) as file:
 
-        lines = file.readlines()
+        previous_blank = False
 
-    cleaned = []
+        for line in file:
 
-    for line in lines:
+            line = line.rstrip()
 
-        if "-->" in line:
-            cleaned.append(line)
-            continue
+            if not line:
 
-        if line.strip().isdigit():
-            cleaned.append(line)
-            continue
+                if previous_blank:
+                    continue
 
-        if line.strip() == "":
-            cleaned.append(line)
-            continue
+                previous_blank = True
 
-        cleaned.append(
-            clean_text(line) + "\n"
-        )
+            else:
+
+                previous_blank = False
+
+            cleaned_lines.append(line)
 
     with open(
-        output_file,
+        output_path,
         "w",
         encoding="utf-8",
+        newline="\n",
     ) as file:
 
-        file.writelines(cleaned)
+        file.write(
+            "\n".join(cleaned_lines).strip()
+        )
+        file.write("\n")

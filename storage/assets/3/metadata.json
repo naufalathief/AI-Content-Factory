@@ -1,0 +1,56 @@
+[
+    {
+        "file": "001.mp4",
+        "keyword": "futuristic spinning city",
+        "pexels_id": 24768492,
+        "duration": 4,
+        "width": 2160,
+        "height": 3840,
+        "fps": 59.94
+    },
+    {
+        "file": "002.mp4",
+        "keyword": "large space station concept",
+        "pexels_id": 34897919,
+        "duration": 14,
+        "width": 3840,
+        "height": 2160,
+        "fps": 30.0
+    },
+    {
+        "file": "003.mp4",
+        "keyword": "people walking inside cylinder",
+        "pexels_id": 6585102,
+        "duration": 12,
+        "width": 2160,
+        "height": 3840,
+        "fps": 30.0
+    },
+    {
+        "file": "004.mp4",
+        "keyword": "rotating cylinder cross-section",
+        "pexels_id": 35069362,
+        "duration": 6,
+        "width": 2160,
+        "height": 3840,
+        "fps": 29.97
+    },
+    {
+        "file": "005.mp4",
+        "keyword": "lush green space city interior",
+        "pexels_id": 33268160,
+        "duration": 10,
+        "width": 3840,
+        "height": 2160,
+        "fps": 59.94
+    },
+    {
+        "file": "006.mp4",
+        "keyword": "serene futuristic space colony",
+        "pexels_id": 31004692,
+        "duration": 41,
+        "width": 2160,
+        "height": 3840,
+        "fps": 24.0
+    }
+]

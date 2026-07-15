@@ -216,3 +216,85 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ======================================================
+# AI Content Factory
+# ======================================================
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# VS Code
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Local database
+*.db
+*.sqlite3
+
+# Environment
+.env
+.env.*
+
+# ======================================================
+# Renderer (Remotion)
+# ======================================================
+
+renderer/node_modules/
+renderer/.cache/
+renderer/.remotion/
+renderer/dist/
+renderer/build/
+renderer/out/
+
+# NPM
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+# ======================================================
+# Generated Assets
+# ======================================================
+
+storage/images/*
+storage/videos/*
+storage/voices/*
+storage/subtitles/*
+storage/timeline/*
+storage/metadata/*
+storage/scripts/*
+
+# Keep directory structure
+!storage/images/.gitkeep
+!storage/videos/.gitkeep
+!storage/voices/.gitkeep
+!storage/subtitles/.gitkeep
+!storage/timeline/.gitkeep
+!storage/metadata/.gitkeep
+!storage/scripts/.gitkeep
+
+# ======================================================
+# Temporary
+# ======================================================
+
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# ======================================================
+# OS
+# ======================================================
+
+Thumbs.db
+Desktop.ini
+.DS_Store

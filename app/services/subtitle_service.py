@@ -3,7 +3,7 @@ import os
 from app.db import get_db
 from app.models import Video
 from app.subtitle_cleaner import clean_srt
-from app.subtitle_generator import generate_subtitle
+from app.generators.subtitle_generator import generate_subtitle
 
 
 def run(video_id: int):

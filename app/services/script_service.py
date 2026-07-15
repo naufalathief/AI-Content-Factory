@@ -4,7 +4,7 @@ import os
 from app.db import get_db
 from app.models import Video
 from app.schemas import Script
-from app.script_generator import generate_script
+from app.generators.script_generator import generate_script
 
 
 def run(video_id: int):

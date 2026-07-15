@@ -44,6 +44,16 @@ class Video(Base):
         nullable=True,
     )
 
+    final_video_path: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    metadata_path: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,

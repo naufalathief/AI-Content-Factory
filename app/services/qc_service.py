@@ -11,7 +11,10 @@ from app.qc import (
 )
 
 
-def check(name, status):
+def check(
+    name: str,
+    status: bool,
+) -> bool:
 
     icon = "✓" if status else "✗"
 
@@ -20,74 +23,134 @@ def check(name, status):
     return status
 
 
-def run(video_id):
+def run(
+    video_id: int,
+) -> bool:
 
     passed = True
 
     with get_db() as db:
 
-        video = db.get(Video, video_id)
+        video = db.get(
+            Video,
+            video_id,
+        )
+
+        if video is None:
+            raise ValueError(
+                f"Video {video_id} not found."
+            )
 
         script = video.script_path
 
         voice = video.voice_path
 
-        assets = f"storage/assets/{video.id}"
-
         video_file = video.video_path
 
-        subtitle = f"storage/subtitles/{video.id}.srt"
+        final_video = video.final_video_path
 
-        final = f"storage/videos/{video.id}_final.mp4"
+        if not final_video:
+            raise ValueError(
+                "Final video path is empty."
+            )
+        
+        image_folder = (
+            f"storage/images/{video.id}"
+        )
+
+        image_metadata = (
+            f"{image_folder}/metadata.json"
+        )
+
+        subtitle = (
+            f"storage/subtitles/{video.id}.srt"
+        )
+
+        metadata = (
+            f"storage/metadata/{video.id}.json"
+        )
 
         passed &= check(
-            "Script exists",
+            "Script",
             file_exists(script),
         )
 
         passed &= check(
-            "Voice exists",
+            "Voice",
             file_exists(voice),
         )
 
         passed &= check(
-            "Assets exist",
-            os.path.isdir(assets),
+            "Images",
+            os.path.isdir(
+                image_folder,
+            ),
         )
 
         passed &= check(
-            "Video exists",
-            file_exists(video_file),
+            "Image Metadata",
+            file_exists(
+                image_metadata,
+            ),
         )
 
         passed &= check(
-            "Subtitle exists",
-            file_exists(subtitle),
+            "Video",
+            file_exists(
+                video_file,
+            ),
         )
 
         passed &= check(
-            "Final video exists",
-            file_exists(final),
+            "Subtitle",
+            file_exists(
+                subtitle,
+            ),
         )
 
-        if file_exists(final):
+        passed &= check(
+            "Final Video",
+            file_exists(
+                final_video,
+            ),
+        )
 
-            info = get_video_info(final)
+        passed &= check(
+            "Metadata",
+            file_exists(
+                metadata,
+            ),
+        )
 
-            duration = get_duration(info)
+        if file_exists(
+            final_video,
+        ):
 
-            width, height = get_resolution(info)
+            info = get_video_info(
+                final_video,
+            )
 
-            fps = get_fps(info)
+            duration = get_duration(
+                info,
+            )
 
-            passed &= check(
-                "Duration > 10 sec",
-                duration > 10,
+            width, height = get_resolution(
+                info,
+            )
+
+            fps = get_fps(
+                info,
             )
 
             passed &= check(
-                "Resolution 1920x1080",
-                width == 1920 and height == 1080,
+                "Duration >= 10 sec",
+                duration >= 10,
+            )
+
+            passed &= check(
+                "Resolution 1080x1920",
+                width == 1080
+                and height == 1920,
             )
 
             passed &= check(
@@ -96,13 +159,16 @@ def run(video_id):
             )
 
         print()
-
-        print("===================")
+        print("=" * 60)
 
         if passed:
 
-            print("PASS")
+            print("QC PASSED")
 
         else:
 
-            print("FAILED")
+            print("QC FAILED")
+
+        print("=" * 60)
+
+        return passed

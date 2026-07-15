@@ -2,7 +2,7 @@ import json
 import os
 
 from app.db import get_db
-from app.metadata_generator import generate_metadata
+from app.generators.metadata_generator import generate_metadata
 from app.models import Video
 
 
@@ -51,5 +51,9 @@ def run(video_id: int):
                 indent=4,
                 ensure_ascii=False,
             )
+        
+        video.metadata_path = output
+
+        db.commit()
 
         return output

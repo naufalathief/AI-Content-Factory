@@ -1,4 +1,5 @@
 services:
+
   postgres:
     image: postgres:17
     container_name: ai-content-factory-db
@@ -15,6 +16,26 @@ services:
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  renderer:
+    build:
+      context: ./renderer
+
+    container_name: ai-content-factory-renderer
+
+    working_dir: /workspace
+
+    stdin_open: true
+    tty: true
+
+    command: tail -f /dev/null
+
+    volumes:
+      - ./renderer:/workspace
+      - ./storage/videos:/storage/videos
+
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:

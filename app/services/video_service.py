@@ -1,34 +1,92 @@
-import os
+from pathlib import Path
+import json
+import subprocess
 
-from app.db import get_db
-from app.models import Video
-from app.video_composer import compose_video
+from app.services.remotion_assets import sync_assets
 
 
 def run(video_id: int):
-    with get_db() as db:
 
-        video = db.get(Video, video_id)
+    timeline = (
+        Path("storage")
+        / "timeline"
+        / f"{video_id}.json"
+    )
 
-        if video is None:
-            raise ValueError(f"Video {video_id} not found.")
+    if not timeline.exists():
+        raise FileNotFoundError(timeline)
 
-        if not os.path.exists(video.voice_path):
-            raise FileNotFoundError(video.voice_path)
+    output = (
+        Path("storage")
+        / "videos"
+        / f"{video_id}.mp4"
+    )
 
-        asset_folder = f"storage/assets/{video.id}"
+    output.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
-        output = f"storage/videos/{video.id}.mp4"
+    props = {
 
-        compose_video(
-            video.voice_path,
-            asset_folder,
-            output,
+        "timeline": json.loads(
+
+            timeline.read_text(
+                encoding="utf-8",
+            )
+
         )
 
-        video.video_path = output
-        video.status = "composed"
+    }
 
-        db.commit()
+    sync_assets(video_id)
 
-        return output
+    command = [
+
+        "docker",
+        "compose",
+        "exec",
+
+        "-T",
+
+        "renderer",
+
+        "npx",
+
+        "remotion",
+
+        "render",
+
+        "src/index.ts",
+
+        "AIContentFactory",
+
+        f"/storage/videos/{video_id}.mp4",
+
+        "--props",
+
+        json.dumps(props),
+
+    ]
+
+    print("=" * 60)
+    print("VIDEO RENDER")
+    print("=" * 60)
+
+    print("COMMAND")
+    print(" ".join(command))
+    print()
+
+    result = subprocess.run(command)
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Remotion rendering failed."
+        )
+
+    if not output.exists():
+        raise FileNotFoundError(output)
+
+    print("=" * 60)
+    print("VIDEO GENERATED")
+    print("=" * 60)
