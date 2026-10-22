@@ -242,6 +242,7 @@ logs/
 # Environment
 .env
 .env.*
+!.env.example
 
 # ======================================================
 # Renderer (Remotion)
@@ -264,22 +265,16 @@ pnpm-lock.yaml
 # Generated Assets
 # ======================================================
 
-storage/images/*
-storage/videos/*
-storage/voices/*
-storage/subtitles/*
-storage/timeline/*
-storage/metadata/*
-storage/scripts/*
+# Everything the pipeline produces (scripts, voices, images, cache, videos...)
+storage/
 
-# Keep directory structure
-!storage/images/.gitkeep
-!storage/videos/.gitkeep
-!storage/voices/.gitkeep
-!storage/subtitles/.gitkeep
-!storage/timeline/.gitkeep
-!storage/metadata/.gitkeep
-!storage/scripts/.gitkeep
+# Assets copied into the renderer and per-render props
+renderer/public/storage/
+renderer/props/
+
+# Local FFmpeg binaries (Windows): download them, never commit them
+tools/ffmpeg/
+*.exe
 
 # ======================================================
 # Temporary
