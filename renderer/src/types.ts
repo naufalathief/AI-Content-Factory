@@ -1,6 +1,26 @@
+export interface Motion {
+
+    name: string;
+
+    zoomStart: number;
+
+    zoomEnd: number;
+
+    xStart: number;
+
+    xEnd: number;
+
+    yStart: number;
+
+    yEnd: number;
+
+}
+
 export interface TimelineClip {
 
     index: number;
+
+    scene?: number;
 
     image: string;
 
@@ -11,6 +31,9 @@ export interface TimelineClip {
     duration: number;
 
     durationFrames: number;
+
+    // Optional so timelines built before motion support still render.
+    motion?: Motion;
 
 }
 

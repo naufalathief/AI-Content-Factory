@@ -1,6 +1,6 @@
 import json
-import os
 
+from app import settings
 from app.db import get_db
 from app.generators.metadata_generator import generate_metadata
 from app.models import Video
@@ -19,7 +19,7 @@ def run(video_id: int):
             raise ValueError("Video not found.")
 
         with open(
-            video.script_path,
+            video.script_path or settings.script_file(video.id),
             "r",
             encoding="utf-8",
         ) as file:
@@ -30,14 +30,9 @@ def run(video_id: int):
             script,
         )
 
-        os.makedirs(
-            "storage/metadata",
-            exist_ok=True,
-        )
+        output = settings.metadata_file(video.id)
 
-        output = (
-            f"storage/metadata/{video.id}.json"
-        )
+        output.parent.mkdir(parents=True, exist_ok=True)
 
         with open(
             output,
@@ -52,8 +47,8 @@ def run(video_id: int):
                 ensure_ascii=False,
             )
         
-        video.metadata_path = output
+        video.metadata_path = str(output)
 
         db.commit()
 
-        return output
+        return str(output)

@@ -1,4 +1,4 @@
-from app.gemini_image_provider import generate_image
+from app.providers.gemini_image_provider import generate_image
 
 
 def main():

@@ -1,9 +1,11 @@
-import os
+import json
+from pathlib import Path
 
+from app import settings
 from app.db import get_db
-from app.models import Video
-from app.subtitle_cleaner import clean_srt
 from app.generators.subtitle_generator import generate_subtitle
+from app.models import Video
+from app.schemas import Script
 
 
 def run(video_id: int):
@@ -19,32 +21,34 @@ def run(video_id: int):
                 f"Video {video_id} not found."
             )
 
-        if not os.path.exists(video.voice_path):
-            raise FileNotFoundError(
-                video.voice_path
+        voice = Path(
+            video.voice_path or settings.voice_file(video.id)
+        )
+
+        if not voice.exists():
+            raise FileNotFoundError(voice)
+
+        text = None
+
+        script_path = Path(
+            video.script_path or settings.script_file(video.id)
+        )
+
+        if script_path.exists():
+
+            script = Script.from_dict(
+                json.loads(script_path.read_text(encoding="utf-8"))
             )
 
-        os.makedirs(
-            "storage/subtitles",
-            exist_ok=True,
-        )
+            text = " ".join(script.narration())
 
-        raw = (
-            f"storage/subtitles/{video.id}_raw.srt"
-        )
-
-        clean = (
-            f"storage/subtitles/{video.id}.srt"
-        )
+        output = settings.subtitle_file(video.id)
 
         generate_subtitle(
-            video.voice_path,
-            raw,
+            voice,
+            output,
+            words_path=settings.words_file(video.id),
+            text=text,
         )
 
-        clean_srt(
-            raw,
-            clean,
-        )
-
-        return clean
+        return str(output)

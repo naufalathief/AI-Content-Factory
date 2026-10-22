@@ -1,9 +1,9 @@
-from app.gemini_client import client
+from app.providers.gemini_client import MODEL_IMAGE, get_client
 
 
 def main():
-    model = client.models.get(
-        model="models/gemini-2.5-flash-image"
+    model = get_client().models.get(
+        model=f"models/{MODEL_IMAGE}"
     )
 
     print(model)

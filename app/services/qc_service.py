@@ -1,5 +1,6 @@
 import os
 
+from app import settings
 from app.db import get_db
 from app.models import Video
 from app.qc import (
@@ -41,34 +42,25 @@ def run(
                 f"Video {video_id} not found."
             )
 
-        script = video.script_path
+        script = video.script_path or str(settings.script_file(video.id))
 
-        voice = video.voice_path
+        voice = video.voice_path or str(settings.voice_file(video.id))
 
-        video_file = video.video_path
+        video_file = video.video_path or str(settings.video_file(video.id))
 
-        final_video = video.final_video_path
-
-        if not final_video:
-            raise ValueError(
-                "Final video path is empty."
-            )
-        
-        image_folder = (
-            f"storage/images/{video.id}"
+        final_video = video.final_video_path or str(
+            settings.final_video_file(video.id)
         )
+
+        image_folder = str(settings.image_dir(video.id))
 
         image_metadata = (
             f"{image_folder}/metadata.json"
         )
 
-        subtitle = (
-            f"storage/subtitles/{video.id}.srt"
-        )
+        subtitle = str(settings.subtitle_file(video.id))
 
-        metadata = (
-            f"storage/metadata/{video.id}.json"
-        )
+        metadata = str(settings.metadata_file(video.id))
 
         passed &= check(
             "Script",
@@ -158,10 +150,27 @@ def run(
                 abs(fps - 30) < 0.5,
             )
 
+            passed &= check(
+                "Duration <= 60 sec (Shorts limit)",
+                duration <= 60,
+            )
+
+            if file_exists(voice):
+
+                voice_duration = get_duration(get_video_info(voice))
+
+                passed &= check(
+                    "Video covers the whole narration",
+                    duration + 0.1 >= voice_duration,
+                )
+
         print()
         print("=" * 60)
 
         if passed:
+
+            video.status = "qc_passed"
+            db.commit()
 
             print("QC PASSED")
 

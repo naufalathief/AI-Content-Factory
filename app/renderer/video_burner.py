@@ -116,16 +116,12 @@ def burn_subtitle(
         "-b:a",
         "192k",
 
-        "-shortest",
-
         "-movflags",
         "+faststart",
 
         str(output),
 
     ]
-
-    print(command)
 
     process = subprocess.run(
         command,

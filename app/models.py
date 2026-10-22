@@ -1,3 +1,4 @@
+from datetime import UTC
 from datetime import datetime
 
 from sqlalchemy import DateTime
@@ -56,6 +57,6 @@ class Video(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
         nullable=False,
     )

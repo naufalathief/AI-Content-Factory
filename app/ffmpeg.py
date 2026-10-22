@@ -1,35 +1,41 @@
-from pathlib import Path
-import os
+"""Locate ffmpeg / ffprobe.
 
+Order: FFMPEG_PATH / FFPROBE_PATH from .env, then the Windows binaries in
+tools/ffmpeg/ (not committed, download them there), then the system PATH.
+Nothing is checked at import time, so modules that only import this file
+keep working on machines without FFmpeg.
+"""
+
+import os
+import shutil
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 ROOT = Path(__file__).resolve().parent.parent
 
 TOOLS = ROOT / "tools" / "ffmpeg"
 
-if os.name == "nt":
 
-    FFMPEG = str(
-        TOOLS / "ffmpeg.exe"
-    )
+def _resolve(name: str, env: str) -> str:
 
-    FFPROBE = str(
-        TOOLS / "ffprobe.exe"
-    )
+    configured = os.getenv(env, "").strip()
 
-else:
+    if configured:
+        return configured
 
-    FFMPEG = "ffmpeg"
+    if os.name == "nt":
 
-    FFPROBE = "ffprobe"
+        bundled = TOOLS / f"{name}.exe"
 
-if os.name == "nt":
+        if bundled.exists():
+            return str(bundled)
 
-    if not Path(FFMPEG).exists():
-        raise FileNotFoundError(
-            f"FFmpeg not found: {FFMPEG}"
-        )
+    return shutil.which(name) or name
 
-    if not Path(FFPROBE).exists():
-        raise FileNotFoundError(
-            f"FFprobe not found: {FFPROBE}"
-        )
+
+FFMPEG = _resolve("ffmpeg", "FFMPEG_PATH")
+
+FFPROBE = _resolve("ffprobe", "FFPROBE_PATH")

@@ -1,15 +1,52 @@
 from pathlib import Path
 
 from google.genai import types
-from google.genai.errors import ClientError
+from google.genai.errors import APIError
 
-from app.providers.gemini_client import (
-    MODEL_IMAGE,
-    client,
-)
+from app.providers.gemini_client import MODEL_IMAGE
+from app.providers.gemini_client import get_client
+from app.providers.gemini_client import is_quota_error
 from app.providers.pollinations_image_provider import (
     generate_image as pollinations_generate_image,
 )
+
+ASPECT_RATIO = "9:16"
+
+# After the first quota error in a run, skip Gemini for the remaining
+# images instead of failing (and waiting) on every single one.
+_quota_exhausted = False
+
+
+def _generate_gemini(
+    prompt: str,
+    output: Path,
+) -> Path:
+
+    response = get_client().models.generate_content(
+        model=MODEL_IMAGE,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_modalities=["IMAGE"],
+            image_config=types.ImageConfig(
+                aspect_ratio=ASPECT_RATIO,
+            ),
+        ),
+    )
+
+    for candidate in response.candidates or []:
+
+        if candidate.content is None:
+            continue
+
+        for part in candidate.content.parts or []:
+
+            if part.inline_data and part.inline_data.data:
+
+                output.write_bytes(part.inline_data.data)
+
+                return output
+
+    raise RuntimeError("Gemini returned no image.")
 
 
 def generate_image(
@@ -17,72 +54,37 @@ def generate_image(
     output_path: str,
 ):
 
-    try:
+    global _quota_exhausted
 
-        response = client.models.generate_content(
-            model=MODEL_IMAGE,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=[
-                    "IMAGE",
-                ],
-            ),
-        )
+    output = Path(output_path)
 
-        image_bytes = None
+    output.parent.mkdir(parents=True, exist_ok=True)
 
-        for candidate in response.candidates or []:
+    if not _quota_exhausted:
 
-            if candidate.content is None:
-                continue
+        try:
 
-            for part in candidate.content.parts:
+            _generate_gemini(prompt, output)
 
-                if (
-                    hasattr(part, "inline_data")
-                    and part.inline_data
-                ):
+            print("Provider : Gemini")
 
-                    image_bytes = (
-                        part.inline_data.data
-                    )
+            return output
 
-                    break
+        except APIError as exc:
 
-            if image_bytes:
-                break
+            if not is_quota_error(exc):
+                raise
 
-        if image_bytes is None:
+            _quota_exhausted = True
 
-            raise RuntimeError(
-                "Gemini returned no image."
-            )
+            print("Provider : Gemini")
+            print("Status   : Quota Exceeded (skipping Gemini for this run)")
 
-        output = Path(output_path)
+    print("Fallback : Pollinations")
 
-        output.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
+    pollinations_generate_image(
+        prompt,
+        str(output),
+    )
 
-        output.write_bytes(
-            image_bytes,
-        )
-
-        print("Provider : Gemini")
-
-        return output
-
-    except ClientError as exc:
-
-        if exc.code != 429:
-            raise
-
-        print("Provider : Gemini")
-        print("Status   : Quota Exceeded")
-        print("Fallback : Pollinations")
-
-        return pollinations_generate_image(
-            prompt,
-            output_path,
-        )
+    return output

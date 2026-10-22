@@ -1,6 +1,6 @@
 import json
-import os
 
+from app import settings
 from app.db import get_db
 from app.models import Video
 from app.schemas import Script
@@ -18,12 +18,9 @@ def run(video_id: int):
             generate_script(video.topic)
         )
 
-        os.makedirs(
-            "storage/scripts",
-            exist_ok=True,
-        )
+        output = settings.script_file(video.id)
 
-        output = f"storage/scripts/{video.id}.json"
+        output.parent.mkdir(parents=True, exist_ok=True)
 
         with open(
             output,
@@ -37,9 +34,9 @@ def run(video_id: int):
                 ensure_ascii=False,
             )
 
-        video.script_path = output
+        video.script_path = str(output)
         video.status = "scripted"
 
         db.commit()
 
-        return output
+        return str(output)

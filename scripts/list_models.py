@@ -1,11 +1,11 @@
-from app.gemini_client import client
+from app.providers.gemini_client import MODEL_IMAGE, get_client
 
 
 def main():
 
-    for model in client.models.list():
+    for model in get_client().models.list():
 
-        if model.name == "models/gemini-2.5-flash-image":
+        if model.name == f"models/{MODEL_IMAGE}":
 
             print(model)
 

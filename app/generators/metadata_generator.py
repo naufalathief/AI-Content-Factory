@@ -1,74 +1,31 @@
-import json
-import os
-
-from dotenv import load_dotenv
-from google import genai
-
-load_dotenv()
-
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY"),
-)
-
-MODEL = "gemini-2.5-flash"
+from app import settings
+from app.providers.gemini_client import generate_json
+from app.schemas import YouTubeMetadata
 
 PROMPT = """
-Kamu adalah seorang YouTube SEO Specialist.
+You are a YouTube SEO specialist for YouTube Shorts.
 
-Berdasarkan data berikut:
+Write everything in this language: {language}.
+It must match the language of the video narration below.
 
-Judul:
+Title:
 {title}
 
-Scene:
+Narration:
 {body}
 
 CTA:
 {cta}
 
-Buat:
+Create:
 
-1. Judul YouTube maksimal 60 karakter.
-2. Deskripsi YouTube sekitar 150–300 kata.
-3. Tepat 10 tag YouTube.
-
-Balas HANYA JSON VALID.
-
-Format:
-
-{{
-    "title": "",
-    "description": "",
-    "tags": [
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ]
-}}
+1. A YouTube title of at most 60 characters.
+2. A YouTube description of about 150-300 words.
+3. Exactly 10 YouTube tags, no "#" sign, no duplicates.
 """
 
-
-def clean_json(text: str) -> str:
-
-    text = text.strip()
-
-    if text.startswith("```json"):
-        text = text[7:]
-
-    elif text.startswith("```"):
-        text = text[3:]
-
-    if text.endswith("```"):
-        text = text[:-3]
-
-    return text.strip()
+MAX_TITLE = 100  # YouTube's hard limit; the prompt asks for 60.
+MAX_TAGS = 10
 
 
 def generate_metadata(
@@ -80,52 +37,32 @@ def generate_metadata(
         for scene in script["scenes"]
     )
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=PROMPT.format(
+    metadata = generate_json(
+        PROMPT.format(
+            language=settings.CONTENT_LANGUAGE,
             title=script["title"],
             body=body,
             cta=script["cta"],
         ),
+        YouTubeMetadata,
     )
 
-    if not response.text:
-        raise RuntimeError(
-            "Gemini returned an empty response."
-        )
+    title = (
+        metadata.title.strip()
+        or script["title"]
+    )[:MAX_TITLE]
 
-    text = clean_json(
-        response.text,
-    )
+    tags: list[str] = []
 
-    try:
+    for tag in metadata.tags:
 
-        metadata = json.loads(text)
+        tag = tag.strip().lstrip("#").strip()
 
-    except json.JSONDecodeError as exc:
+        if tag and tag.lower() not in {t.lower() for t in tags}:
+            tags.append(tag)
 
-        raise RuntimeError(
-            "Gemini returned invalid JSON."
-        ) from exc
-
-    metadata.setdefault(
-        "title",
-        script["title"],
-    )
-
-    metadata.setdefault(
-        "description",
-        "",
-    )
-
-    metadata.setdefault(
-        "tags",
-        [],
-    )
-
-    metadata["tags"] = metadata["tags"][:10]
-
-    while len(metadata["tags"]) < 10:
-        metadata["tags"].append("")
-
-    return metadata
+    return {
+        "title": title,
+        "description": metadata.description.strip(),
+        "tags": tags[:MAX_TAGS],
+    }

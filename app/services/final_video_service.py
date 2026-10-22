@@ -1,5 +1,6 @@
 import os
 
+from app import settings
 from app.db import get_db
 from app.models import Video
 from app.renderer.video_burner import burn_subtitle
@@ -22,16 +23,14 @@ def run(
                 f"Video {video_id} not found."
             )
 
-        if not video.video_path:
+        # Fall back to the default location so a resumed run (render step
+        # skipped because the file exists) still works.
+        video_path = video.video_path or str(
+            settings.video_file(video.id)
+        )
 
-            raise ValueError(
-                "Video path is empty."
-            )
-
-        video_path = video.video_path
-
-        subtitle_path = (
-            f"storage/subtitles/{video.id}.srt"
+        subtitle_path = str(
+            settings.subtitle_file(video.id)
         )
 
         if not os.path.exists(
@@ -50,13 +49,8 @@ def run(
                 subtitle_path,
             )
 
-        os.makedirs(
-            "storage/videos",
-            exist_ok=True,
-        )
-
-        output = (
-            f"storage/videos/{video.id}_final.mp4"
+        output = str(
+            settings.final_video_file(video.id)
         )
 
         print("=" * 60)
@@ -65,11 +59,12 @@ def run(
 
         burn_subtitle(
             video_path,
-            f"storage/voices/{video.id}.mp3",
+            video.voice_path or str(settings.voice_file(video.id)),
             subtitle_path,
             output,
         )
 
+        video.video_path = video_path
         video.final_video_path = output
         video.status = "completed"
 

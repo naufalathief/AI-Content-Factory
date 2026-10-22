@@ -1,10 +1,10 @@
 import json
-import os
 
+from app import settings
 from app.db import get_db
+from app.generators.voice_generator import generate_voice
 from app.models import Video
 from app.schemas import Script
-from app.generators.voice_generator import generate_voice
 
 
 def run(video_id: int):
@@ -15,8 +15,12 @@ def run(video_id: int):
         if video is None:
             raise ValueError(f"Video {video_id} not found.")
 
+        script_path = video.script_path or str(
+            settings.script_file(video.id)
+        )
+
         with open(
-            video.script_path,
+            script_path,
             "r",
             encoding="utf-8",
         ) as file:
@@ -25,29 +29,19 @@ def run(video_id: int):
                 json.load(file)
             )
 
-        text = "\n\n".join(
-            scene.text
-            for scene in script.scenes
-        )
+        text = "\n\n".join(script.narration())
 
-        text += "\n\n"
-        text += script.cta
-
-        os.makedirs(
-            "storage/voices",
-            exist_ok=True,
-        )
-
-        output = f"storage/voices/{video.id}.mp3"
+        output = settings.voice_file(video.id)
 
         generate_voice(
             text,
             output,
+            settings.words_file(video.id),
         )
 
-        video.voice_path = output
+        video.voice_path = str(output)
         video.status = "voiced"
 
         db.commit()
 
-        return output
+        return str(output)

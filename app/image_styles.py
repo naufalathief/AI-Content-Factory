@@ -98,3 +98,24 @@ no text,
 no logo,
 no watermark
 """.strip()
+
+STYLES = {
+    "default": DEFAULT_STYLE,
+    "space": SPACE_STYLE,
+    "history": HISTORY_STYLE,
+    "science": SCIENCE_STYLE,
+    "tech": TECH_STYLE,
+}
+
+
+def get_style(name: str) -> str:
+    """Style block by name (IMAGE_STYLE in .env), flattened to one line."""
+
+    try:
+        style = STYLES[name.strip().lower()]
+    except KeyError:
+        raise ValueError(
+            f"Unknown IMAGE_STYLE {name!r}. Choose one of: {', '.join(STYLES)}"
+        ) from None
+
+    return " ".join(style.split())
