@@ -50,5 +50,6 @@ def test_metadata_tags_are_cleaned_not_padded(monkeypatch):
 
 
 def test_style_lookup():
-    assert "NASA concept art" in get_style("space")
+    assert "space telescope" in get_style("space")
+    assert "8K" not in get_style("default")
     assert "\n" not in get_style("default")
