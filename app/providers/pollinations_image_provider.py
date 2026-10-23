@@ -30,7 +30,7 @@ FREE_INTERVAL = 46  # seconds between requests on the free tier
 
 TOKEN = os.getenv("POLLINATIONS_TOKEN", "").strip()
 
-_last_request = 0.0
+_last_request: float | None = None
 
 
 def clean_prompt(prompt: str) -> str:
@@ -71,7 +71,11 @@ def _throttle():
     if TOKEN:
         return
 
-    wait = FREE_INTERVAL - (time.monotonic() - _last_request)
+    wait = (
+        0.0
+        if _last_request is None
+        else FREE_INTERVAL - (time.monotonic() - _last_request)
+    )
 
     if wait > 0:
         print(f"Pollinations free tier: waiting {wait:.0f}s")
