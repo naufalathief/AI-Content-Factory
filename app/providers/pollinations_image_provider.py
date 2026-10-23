@@ -34,12 +34,7 @@ _last_request = 0.0
 
 
 def clean_prompt(prompt: str) -> str:
-    """Normalize whitespace and drop the negative "Avoid:" list.
-
-    Flux does not understand negation: "Avoid: distorted hands" makes it
-    draw hands. Gemini gets the full prompt; Flux only the positive part.
-    """
-    prompt = prompt.split(" Avoid:")[0]
+    """Normalize whitespace only. Do NOT truncate the prompt."""
     return " ".join(prompt.split())
 
 
@@ -53,9 +48,7 @@ def build_url(prompt: str, seed: int) -> str:
         f"&model={MODEL}"
         f"&seed={seed}"
         "&nologo=true"
-        # Our prompts are already detailed; letting Pollinations rewrite them
-        # tends to add "8K masterpiece" style words and a CGI look.
-        "&enhance=false"
+        "&enhance=true"
         "&safe=false"
     )
 

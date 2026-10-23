@@ -16,8 +16,9 @@ def build_prompt(
     content_prompt: str,
     style: str,
 ) -> str:
-    # Subject first: image models weigh the start of the prompt most.
-    return f"{content_prompt.strip()}, {style}"
+    # Same order as the original pipeline (style block first), so images
+    # look the same and existing cache entries still match.
+    return f"{style}, {content_prompt.strip()}"
 
 
 class ImageGenerator:

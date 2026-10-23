@@ -38,31 +38,20 @@ Generate ONE search keyword per scene suitable for SEO.
 
 STORYBOARD RULES
 
-For EVERY scene generate EXACTLY 3 visuals that follow the sentence in order.
+For EVERY scene generate EXACTLY 3 visuals.
 
-Write each visual prompt in English like a photographer's shot description of
-something that could really be photographed. Give every visual ONE clear main
-subject; do not stack several subjects or effects into one frame.
+Each visual must contain:
 
-- A concrete subject doing a concrete action (who/what, wearing/made of what).
-- A specific real location and time of day ("a fishing pier in Maine at dawn",
-  not "a beautiful place").
-- Shot type and camera angle (close-up, medium shot, low angle, over the
-  shoulder, aerial).
-- The light that is actually there (overcast daylight, golden hour sun,
-  fluorescent office light, campfire).
-- One or two small realistic details (dust, condensation, worn edges,
-  messy cables) that make it feel real.
+- Ultra realistic
+- Cinematic
+- Photorealistic
+- Vertical composition
+- Sharp focus
+- No text
+- No logo
+- No watermark
 
-Describe only what IS in the frame; never write negatives such as "no hands"
-or "without people".
-
-Do NOT use words like "ultra realistic", "8K", "masterpiece", "cinematic",
-"epic", "stunning" or "concept art", and never ask for text in the image.
-Keep the same people, places and objects consistent across a scene's visuals.
-
-Each visual duration is a relative weight between 1.3 and 2.0. The final
-timing is synced to the narration later, so do not try to match seconds.
+Each duration must be between 1.3 and 2.0 seconds.
 
 Leave every scene "duration" at 0.
 """
