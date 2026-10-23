@@ -3,6 +3,7 @@ from pathlib import Path
 from google.genai import types
 from google.genai.errors import APIError
 
+from app import settings
 from app.providers.gemini_client import MODEL_IMAGE
 from app.providers.gemini_client import get_client
 from app.providers.gemini_client import is_quota_error
@@ -60,7 +61,12 @@ def generate_image(
 
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    if not _quota_exhausted:
+    if settings.IMAGE_PROVIDER not in ("gemini", "pollinations"):
+        raise ValueError(
+            f"Unknown IMAGE_PROVIDER {settings.IMAGE_PROVIDER!r}; use gemini or pollinations."
+        )
+
+    if settings.IMAGE_PROVIDER == "gemini" and not _quota_exhausted:
 
         try:
 

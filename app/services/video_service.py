@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -51,20 +52,42 @@ def run(video_id: int):
 
     props = write_props(video_id, timeline)
 
-    command = [
-        "docker",
-        "compose",
-        "exec",
-        "-T",
-        settings.RENDERER_SERVICE,
-        "npx",
+    render = [
         "remotion",
         "render",
         "src/index.ts",
         "AIContentFactory",
-        f"/storage/videos/{video_id}.mp4",
-        f"--props={props}",
     ]
+
+    if settings.RENDER_MODE == "local":
+
+        command = [
+            "npx.cmd" if os.name == "nt" else "npx",
+            *render,
+            str(output.resolve()),
+            f"--props={props}",
+        ]
+
+        if settings.REMOTION_BROWSER:
+            command.append(f"--browser-executable={settings.REMOTION_BROWSER}")
+
+        cwd = RENDERER_DIR
+
+    else:
+
+        command = [
+            "docker",
+            "compose",
+            "exec",
+            "-T",
+            settings.RENDERER_SERVICE,
+            "npx",
+            *render,
+            f"/storage/videos/{video_id}.mp4",
+            f"--props={props}",
+        ]
+
+        cwd = settings.ROOT
 
     print("=" * 60)
     print("VIDEO RENDER")
@@ -73,17 +96,17 @@ def run(video_id: int):
     print()
 
     try:
-        result = subprocess.run(command, cwd=settings.ROOT)
+        result = subprocess.run(command, cwd=cwd)
     except FileNotFoundError as exc:
         raise RuntimeError(
-            "Docker is not available. Start it and run "
-            "`docker compose up -d renderer`."
+            f"{command[0]} is not available. Use RENDER_MODE=docker with "
+            "`docker compose up -d renderer`, or RENDER_MODE=local with "
+            "Node.js and `npm ci` in renderer/."
         ) from exc
 
     if result.returncode != 0:
         raise RuntimeError(
-            "Remotion rendering failed. Is the renderer running? "
-            "Try `docker compose up -d renderer`."
+            f"Remotion rendering failed (RENDER_MODE={settings.RENDER_MODE})."
         )
 
     if not output.exists():

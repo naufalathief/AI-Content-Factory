@@ -97,6 +97,9 @@ TTS_RATE = _env("TTS_RATE", "+0%")
 # ---------------------------------------------------------------------------
 
 IMAGE_STYLE = _env("IMAGE_STYLE", "default")
+
+# "gemini" (with automatic Pollinations fallback) or "pollinations"
+IMAGE_PROVIDER = _env("IMAGE_PROVIDER", "gemini").lower()
 IMAGE_MAX_RETRIES = int(_env("IMAGE_MAX_RETRIES", "3"))
 
 # ---------------------------------------------------------------------------
@@ -111,3 +114,11 @@ VIDEO_FPS = 30
 VIDEO_TAIL_SECONDS = float(_env("VIDEO_TAIL_SECONDS", "0.6"))
 
 RENDERER_SERVICE = _env("RENDERER_SERVICE", "renderer")
+
+# "docker": render inside the renderer container (docker compose)
+# "local":  run Remotion directly with the Node.js on this machine
+RENDER_MODE = _env("RENDER_MODE", "docker").lower()
+
+# Optional Chrome/Chromium binary for local renders (Remotion downloads its
+# own headless shell when this is empty).
+REMOTION_BROWSER = os.getenv("REMOTION_BROWSER", "").strip()
