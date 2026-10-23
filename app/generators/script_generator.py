@@ -41,7 +41,8 @@ STORYBOARD RULES
 For EVERY scene generate EXACTLY 3 visuals that follow the sentence in order.
 
 Write each visual prompt in English like a photographer's shot description of
-something that could really be photographed:
+something that could really be photographed. Give every visual ONE clear main
+subject; do not stack several subjects or effects into one frame.
 
 - A concrete subject doing a concrete action (who/what, wearing/made of what).
 - A specific real location and time of day ("a fishing pier in Maine at dawn",
@@ -52,6 +53,9 @@ something that could really be photographed:
   fluorescent office light, campfire).
 - One or two small realistic details (dust, condensation, worn edges,
   messy cables) that make it feel real.
+
+Describe only what IS in the frame; never write negatives such as "no hands"
+or "without people".
 
 Do NOT use words like "ultra realistic", "8K", "masterpiece", "cinematic",
 "epic", "stunning" or "concept art", and never ask for text in the image.

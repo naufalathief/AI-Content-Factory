@@ -1,10 +1,20 @@
+"""Pollinations image fallback.
+
+The free tier allows 1 image every 45 seconds per IP, answers faster
+requests with HTTP 402 (code FREE_LIMIT, "Retry after Ns") and stamps a
+"pollinations.ai" watermark in the corner even with nologo=true. Without a
+key we space requests out ourselves; with POLLINATIONS_TOKEN set there is
+no rate limit and no watermark.
+"""
+
+import os
+import random
+import re
+import time
 from pathlib import Path
 from urllib.parse import quote
-import random
-import time
 
 import requests
-
 
 BASE_URL = "https://image.pollinations.ai/prompt/"
 
@@ -16,24 +26,28 @@ HEIGHT = 1920
 TIMEOUT = 180
 MAX_RETRY = 5
 
+FREE_INTERVAL = 46  # seconds between requests on the free tier
+
+TOKEN = os.getenv("POLLINATIONS_TOKEN", "").strip()
+
+_last_request = 0.0
+
 
 def clean_prompt(prompt: str) -> str:
+    """Normalize whitespace and drop the negative "Avoid:" list.
+
+    Flux does not understand negation: "Avoid: distorted hands" makes it
+    draw hands. Gemini gets the full prompt; Flux only the positive part.
     """
-    Normalize whitespace only.
-    Do NOT truncate prompt.
-    """
+    prompt = prompt.split(" Avoid:")[0]
     return " ".join(prompt.split())
 
 
-def build_url(prompt: str) -> str:
-
-    prompt = clean_prompt(prompt)
-
-    seed = random.randint(1, 2_147_483_647)
+def build_url(prompt: str, seed: int) -> str:
 
     return (
         f"{BASE_URL}"
-        f"{quote(prompt, safe='')}"
+        f"{quote(clean_prompt(prompt), safe='')}"
         f"?width={WIDTH}"
         f"&height={HEIGHT}"
         f"&model={MODEL}"
@@ -46,27 +60,31 @@ def build_url(prompt: str) -> str:
     )
 
 
-def download(url: str, output_path: str):
+def retry_after(response: requests.Response) -> float | None:
+    """Seconds to wait when the free limit was hit, else None."""
 
-    response = requests.get(
-        url,
-        timeout=TIMEOUT,
-        headers={
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-        },
-    )
+    if response.status_code not in (402, 429):
+        return None
 
-    response.raise_for_status()
+    match = re.search(r"Retry after (\d+)", response.text)
 
-    output = Path(output_path)
+    return float(match.group(1)) + 1 if match else FREE_INTERVAL
 
-    output.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
 
-    output.write_bytes(response.content)
+def _throttle():
+
+    global _last_request
+
+    if TOKEN:
+        return
+
+    wait = FREE_INTERVAL - (time.monotonic() - _last_request)
+
+    if wait > 0:
+        print(f"Pollinations free tier: waiting {wait:.0f}s")
+        time.sleep(wait)
+
+    _last_request = time.monotonic()
 
 
 def generate_image(
@@ -74,35 +92,50 @@ def generate_image(
     output_path: str,
 ):
 
-    last_error = None
+    headers = {"Cache-Control": "no-cache"}
+
+    if TOKEN:
+        headers["Authorization"] = f"Bearer {TOKEN}"
+
+    seed = random.randint(1, 2_147_483_647)
+
+    url = build_url(prompt, seed)
+
+    last_error: Exception | None = None
 
     for attempt in range(MAX_RETRY):
 
-        url = build_url(prompt)
+        _throttle()
+
+        print(f"Provider : Pollinations ({attempt + 1}/{MAX_RETRY}) seed={seed}")
 
         try:
 
-            print(
-                f"Provider : Pollinations ({attempt + 1}/{MAX_RETRY})"
-            )
+            response = requests.get(url, timeout=TIMEOUT, headers=headers)
 
-            print(f"Seed     : {url.split('seed=')[1].split('&')[0]}")
-            print(f"Prompt   : {len(prompt)} chars")
-
-            download(
-                url,
-                output_path,
-            )
-
-            return
-
-        except Exception as exc:
+        except requests.RequestException as exc:
 
             last_error = exc
-
             print(f"Pollinations Error : {exc}")
+            continue
 
-            if attempt != MAX_RETRY - 1:
-                time.sleep(3)
+        wait = retry_after(response)
 
-    raise last_error
+        if wait is not None:
+            last_error = RuntimeError(f"Pollinations rate limit ({response.status_code})")
+            print(f"Pollinations limit : retry in {wait:.0f}s")
+            time.sleep(wait)
+            continue
+
+        if not response.ok:
+            last_error = RuntimeError(f"Pollinations HTTP {response.status_code}")
+            print(f"Pollinations Error : HTTP {response.status_code}")
+            continue
+
+        output = Path(output_path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_bytes(response.content)
+
+        return
+
+    raise RuntimeError("Pollinations failed.") from last_error

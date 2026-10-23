@@ -53,3 +53,28 @@ def test_style_lookup():
     assert "space telescope" in get_style("space")
     assert "8K" not in get_style("default")
     assert "\n" not in get_style("default")
+
+
+def test_pollinations_free_limit_is_detected():
+    from types import SimpleNamespace
+
+    from app.providers.pollinations_image_provider import retry_after
+
+    limited = SimpleNamespace(
+        status_code=402,
+        text='{"error":{"code":"FREE_LIMIT","message":"Free limit reached: 1 image every 45 seconds per IP. Retry after 21s"}}',
+    )
+
+    assert retry_after(limited) == 22
+    assert retry_after(SimpleNamespace(status_code=200, text="")) is None
+
+
+def test_pollinations_gets_no_negative_list():
+    from app.generators.image_generator import build_prompt
+    from app.providers.pollinations_image_provider import clean_prompt
+
+    prompt = build_prompt("A tide pool at dusk", get_style("default"))
+
+    assert "Avoid:" in prompt
+    assert "Avoid" not in clean_prompt(prompt)
+    assert clean_prompt(prompt).startswith("A tide pool at dusk, Authentic documentary photograph")
