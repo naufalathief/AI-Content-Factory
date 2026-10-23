@@ -7,19 +7,28 @@ from pathlib import Path
 from PIL import Image
 from PIL import ImageOps
 
+from app import settings
+from app.image_styles import get_style
 from app.providers.gemini_image_provider import generate_image
-from app.image_prompt_builder import build_prompt
-from app.image_styles import DEFAULT_STYLE
+
+
+def build_prompt(
+    content_prompt: str,
+    style: str,
+) -> str:
+    # Same order as the original pipeline (style block first), so images
+    # look the same and existing cache entries still match.
+    return f"{style}, {content_prompt.strip()}"
 
 
 class ImageGenerator:
 
-    CACHE_DIR = Path("storage/cache/images")
+    CACHE_DIR = settings.storage_path("cache", "images")
 
-    MIN_WIDTH = 1024
-    MIN_HEIGHT = 1024
+    WIDTH = settings.VIDEO_WIDTH
+    HEIGHT = settings.VIDEO_HEIGHT
 
-    MAX_RETRY = 1
+    MAX_RETRY = settings.IMAGE_MAX_RETRIES
 
     def __init__(self):
 
@@ -28,16 +37,15 @@ class ImageGenerator:
             exist_ok=True,
         )
 
+        self.style = get_style(settings.IMAGE_STYLE)
+
     def generate(
         self,
         video_id: int,
         script,
     ):
 
-        output_dir = (
-            Path("storage/images")
-            / str(video_id)
-        )
+        output_dir = settings.image_dir(video_id)
 
         output_dir.mkdir(
             parents=True,
@@ -75,35 +83,22 @@ class ImageGenerator:
 
                 prompt = build_prompt(
                     visual.prompt,
-                    DEFAULT_STYLE,
+                    self.style,
                 )
 
                 hash_id = hashlib.sha256(
                     prompt.encode()
                 ).hexdigest()
 
-                cache = (
-                    self.CACHE_DIR
-                    / f"{hash_id}.png"
-                )
+                cache = self.CACHE_DIR / f"{hash_id}.png"
 
-                filename = (
-                    f"{image_index:03}.png"
-                )
+                filename = f"{image_index:03}.png"
 
-                output = (
-                    output_dir
-                    / filename
-                )
+                output = output_dir / filename
 
                 if cache.exists():
 
                     print("Cache : HIT")
-
-                    shutil.copy2(
-                        cache,
-                        output,
-                    )
 
                 else:
 
@@ -114,178 +109,119 @@ class ImageGenerator:
                         cache,
                     )
 
-                    shutil.copy2(
-                        cache,
-                        output,
-                    )
-
-                width, height = self.verify(
+                shutil.copy2(
+                    cache,
                     output,
                 )
 
                 metadata.append(
-
                     {
-
                         "scene": scene_number,
-
                         "visual": visual_number,
-
                         "file": filename,
-
                         "duration": visual.duration,
-
-                        "width": width,
-
-                        "height": height,
-
+                        "width": self.WIDTH,
+                        "height": self.HEIGHT,
                         "prompt": prompt,
-
                         "hash": hash_id,
-
                     }
-
                 )
 
                 image_index += 1
 
                 print()
 
-        with open(
-
-            output_dir / "metadata.json",
-
-            "w",
-
+        # Written last: its presence marks the step as complete for resume.
+        (output_dir / "metadata.json").write_text(
+            json.dumps(metadata, indent=4, ensure_ascii=False),
             encoding="utf-8",
-
-        ) as file:
-
-            json.dump(
-
-                metadata,
-
-                file,
-
-                indent=4,
-
-                ensure_ascii=False,
-
-            )
+        )
 
         print("=" * 60)
         print("DONE")
         print("=" * 60)
 
-    def upscale_if_needed(
+    def normalize(
         self,
-        image_path,
+        image_path: Path,
     ):
+        """Crop and resize to exactly 1080x1920 so every frame matches."""
 
-        image = Image.open(image_path)
+        with Image.open(image_path) as image:
 
-        width, height = image.size
+            image.load()
 
-        if (
-            width >= self.MIN_WIDTH
-            and height >= self.MIN_HEIGHT
-        ):
-            image.close()
-            return
+            fitted = ImageOps.fit(
+                image.convert("RGB"),
+                (self.WIDTH, self.HEIGHT),
+                Image.LANCZOS,
+                centering=(0.5, 0.45),
+            )
 
-        scale = max(
-            self.MIN_WIDTH / width,
-            self.MIN_HEIGHT / height,
-        )
-
-        new_width = int(width * scale)
-        new_height = int(height * scale)
-
-        resized = image.resize(
-            (new_width, new_height),
-            Image.LANCZOS,
-        )
-
-        resized.save(image_path)
-
-        image.close()
-        resized.close()
+        fitted.save(image_path, format="PNG")
 
     def generate_retry(
-
         self,
-
-        prompt,
-
-        cache_file,
-
+        prompt: str,
+        cache_file: Path,
     ):
 
-        last_error = None
+        tmp = cache_file.with_suffix(".part")
 
-        for attempt in range(
+        last_error: Exception | None = None
 
-            self.MAX_RETRY,
-
-        ):
+        for attempt in range(self.MAX_RETRY):
 
             try:
 
-                print(
-                    f"Generate ({attempt+1}/{self.MAX_RETRY})"
-                )
+                print(f"Generate ({attempt + 1}/{self.MAX_RETRY})")
 
                 generate_image(
                     prompt,
-                    str(cache_file),
+                    str(tmp),
                 )
 
-                self.upscale_if_needed(
-                    cache_file,
-                )
+                self.verify(tmp)
 
-                self.verify(
-                    cache_file,
-                )
+                self.normalize(tmp)
+
+                # Only a complete, valid image ever lands in the cache.
+                tmp.replace(cache_file)
 
                 return
 
-            except Exception as e:
+            except Exception as exc:
 
-                last_error = e
+                last_error = exc
 
-                time.sleep(2)
+                print(f"Error : {exc}")
 
-        raise last_error
+                tmp.unlink(missing_ok=True)
+
+                if attempt + 1 < self.MAX_RETRY:
+                    time.sleep(2 ** (attempt + 1))
+
+        raise RuntimeError(
+            f"Image generation failed after {self.MAX_RETRY} attempts."
+        ) from last_error
 
     def verify(
-
         self,
-
-        image_path,
-
+        image_path: Path,
     ):
 
-        image = Image.open(
-            image_path,
-        )
+        with Image.open(image_path) as image:
 
-        width, height = image.size
+            image.verify()
 
-        if width < self.MIN_WIDTH:
+        with Image.open(image_path) as image:
 
-            raise RuntimeError(
-                "Image width too small."
-            )
+            width, height = image.size
 
-        if height < self.MIN_HEIGHT:
+        if width < 512 or height < 512:
 
             raise RuntimeError(
-                "Image height too small."
+                f"Image too small: {width}x{height}."
             )
-
-        image.verify()
-
-        image.close()
 
         return width, height

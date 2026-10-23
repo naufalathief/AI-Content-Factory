@@ -1,10 +1,11 @@
 {
   "name": "renderer",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Remotion renderer for AI Content Factory",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "studio": "remotion studio src/index.ts",
+    "typecheck": "tsc",
+    "render": "remotion render src/index.ts AIContentFactory"
   },
   "keywords": [],
   "author": "",

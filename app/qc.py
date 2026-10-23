@@ -47,6 +47,13 @@ def get_duration(
     )
 
 
+def get_audio_duration(path: str) -> float:
+
+    return get_duration(
+        get_video_info(path)
+    )
+
+
 def get_resolution(
     info: dict,
 ) -> tuple[int, int]:

@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 from app.services.qc_service import run
 
@@ -24,7 +25,8 @@ def main():
 
     print()
 
-    run(args.id)
+    if not run(args.id):
+        sys.exit(1)
 
 
 if __name__ == "__main__":

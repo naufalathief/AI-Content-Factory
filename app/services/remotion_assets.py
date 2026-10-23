@@ -1,73 +1,32 @@
-from pathlib import Path
 import shutil
+
+from app import settings
+
+PUBLIC = settings.ROOT / "renderer" / "public" / "storage"
 
 
 def sync_assets(video_id: int):
+    """Copy the images and voice the renderer needs into renderer/public."""
 
-    public = (
-        Path("renderer")
-        / "public"
-        / "storage"
-    )
+    src = settings.image_dir(video_id)
 
-    # Images
-    src = (
-        Path("storage")
-        / "images"
-        / str(video_id)
-    )
+    if not src.exists():
+        raise FileNotFoundError(src)
 
-    dst = (
-        public
-        / "images"
-        / str(video_id)
-    )
+    dst = PUBLIC / "images" / str(video_id)
 
     if dst.exists():
         shutil.rmtree(dst)
 
     shutil.copytree(src, dst)
 
-    # Voice
-    voice_dst = (
-        public
-        / "voices"
-    )
+    voice = settings.voice_file(video_id)
 
-    voice_dst.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    if not voice.exists():
+        raise FileNotFoundError(voice)
 
-    shutil.copy2(
-        Path("storage")
-        / "voices"
-        / f"{video_id}.mp3",
-        voice_dst
-        / f"{video_id}.mp3",
-    )
+    voice_dst = PUBLIC / "voices"
 
-    # Subtitle
-    subtitle = (
-        Path("storage")
-        / "subtitles"
-        / f"{video_id}.srt"
-    )
+    voice_dst.mkdir(parents=True, exist_ok=True)
 
-    if subtitle.exists():
-
-        subtitle_dst = (
-            public
-            / "subtitles"
-        )
-
-        subtitle_dst.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        shutil.copy2(
-            subtitle,
-            subtitle_dst
-            / f"{video_id}.srt",
-        )
+    shutil.copy2(voice, voice_dst / voice.name)

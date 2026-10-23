@@ -1,15 +1,26 @@
+"""Subtitle generation.
+
+Word timings come from edge-tts (saved next to the voice) whenever they are
+available. Whisper is only a fallback for audio without timings, so it is
+imported lazily and is an optional dependency (requirements-whisper.txt).
+"""
+
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import TYPE_CHECKING
 
-from faster_whisper import WhisperModel
+from app import settings
+
+if TYPE_CHECKING:
+    from faster_whisper import WhisperModel
 
 
 MODEL_SIZE = "base"
 
-LANGUAGE = "en"
+LANGUAGE = settings.WHISPER_LANGUAGE
 
 BEAM_SIZE = 5
 
@@ -56,6 +67,15 @@ def get_model() -> WhisperModel:
 
     if _model is None:
 
+        try:
+            from faster_whisper import WhisperModel
+        except ImportError as exc:
+            raise RuntimeError(
+                "No word timings found for this voice and faster-whisper "
+                "is not installed. Regenerate the voice, or run "
+                "`pip install -r requirements-whisper.txt`."
+            ) from exc
+
         print("=" * 60)
         print("Loading Whisper Model")
         print("=" * 60)
@@ -71,23 +91,15 @@ def get_model() -> WhisperModel:
 
 def format_time(seconds: float) -> str:
 
-    milliseconds = int(
-        round(
-            (seconds % 1) * 1000
-        )
-    )
+    # Work in whole milliseconds: rounding the fraction separately could
+    # produce ",1000" (e.g. 1.9996 s) and an invalid SRT timestamp.
+    total_ms = max(0, int(round(seconds * 1000)))
 
-    total = int(seconds)
+    total, milliseconds = divmod(total_ms, 1000)
 
-    second = total % 60
+    total, second = divmod(total, 60)
 
-    total //= 60
-
-    minute = total % 60
-
-    total //= 60
-
-    hour = total
+    hour, minute = divmod(total, 60)
 
     return (
         f"{hour:02}:"
@@ -400,3 +412,145 @@ def segment_words(
         balanced.append(caption)
 
     return balanced
+
+
+def load_timed_words(
+    words_path: str | Path,
+) -> list[Word]:
+
+    data = json.loads(
+        Path(words_path).read_text(encoding="utf-8")
+    )
+
+    return [
+        Word(
+            text=item["text"],
+            start=float(item["start"]),
+            end=float(item["end"]),
+        )
+        for item in data
+        if item["text"].strip()
+    ]
+
+
+def restore_punctuation(
+    words: list[Word],
+    text: str,
+    max_gap: int = 40,
+) -> list[Word]:
+    """Map TTS word tokens back onto the original script text.
+
+    edge-tts reports bare words ("Did", "you", "know"). Taking the matching
+    span from the script brings back casing and punctuation, which the
+    caption splitter needs to break lines at sentence ends.
+    """
+
+    lower = text.lower()
+
+    restored: list[Word] = []
+
+    cursor = 0
+
+    remainder = ""
+
+    for word in words:
+
+        token = word.text.strip()
+
+        key = token.lower()
+
+        # A token that is the rest of the previous span ("well-known"
+        # spoken as "well" + "known") extends that caption word.
+        if restored and remainder and key and key in remainder:
+
+            restored[-1].end = word.end
+
+            remainder = remainder[remainder.index(key) + len(key):]
+
+            continue
+
+        index = lower.find(key, cursor) if key else -1
+
+        if index == -1 or index - cursor > max_gap:
+
+            restored.append(Word(token, word.start, word.end))
+
+            remainder = ""
+
+            continue
+
+        start = index
+
+        while start > cursor and not text[start - 1].isspace():
+            start -= 1
+
+        end = index + len(token)
+
+        while end < len(text) and not text[end].isspace():
+            end += 1
+
+        restored.append(Word(text[start:end], word.start, word.end))
+
+        remainder = lower[index + len(token):end]
+
+        cursor = end
+
+    return restored
+
+
+def write_srt(
+    captions: list[Caption],
+    output_path: str | Path,
+) -> None:
+
+    blocks = [
+        f"{number}\n"
+        f"{format_time(caption.start)} --> {format_time(caption.end)}\n"
+        f"{caption.text}\n"
+        for number, caption in enumerate(captions, start=1)
+    ]
+
+    output = Path(output_path)
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    output.write_text(
+        "\n".join(blocks),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def generate_subtitle(
+    audio_path: str | Path,
+    output_path: str | Path,
+    words_path: str | Path | None = None,
+    text: str | None = None,
+) -> list[Caption]:
+    """Build an SRT from TTS word timings, or Whisper as a fallback."""
+
+    if words_path is not None and Path(words_path).exists():
+
+        print("Timing : edge-tts word boundaries")
+
+        words = load_timed_words(words_path)
+
+        if text:
+            words = restore_punctuation(words, text)
+
+    else:
+
+        print("Timing : Whisper transcription")
+
+        words = load_words(str(audio_path))
+
+    if not words:
+        raise RuntimeError(
+            f"No words found for {audio_path}."
+        )
+
+    captions = segment_words(words)
+
+    write_srt(captions, output_path)
+
+    return captions

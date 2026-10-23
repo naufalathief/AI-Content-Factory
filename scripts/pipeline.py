@@ -1,6 +1,17 @@
-import argparse
-import time
+"""Run the whole pipeline for one video.
 
+    python -m scripts.pipeline 12               # resume, skip finished steps
+    python -m scripts.pipeline 12 --from image  # redo images and everything after
+    python -m scripts.pipeline 12 --force       # redo every step
+"""
+
+import argparse
+import sys
+import time
+from pathlib import Path
+from typing import Callable
+
+from app import settings
 from app.services.final_video_service import run as final_video
 from app.services.image_service import run as image
 from app.services.metadata_service import run as metadata
@@ -11,11 +22,28 @@ from app.services.timeline_service import run as timeline
 from app.services.video_service import run as video
 from app.services.voice_service import run as voice
 
-from tools.pipeline import skip_directory, skip_file
+
+def image_done(video_id: int) -> Path:
+    # metadata.json is written last, so it marks a complete image set.
+    return settings.image_dir(video_id) / "metadata.json"
 
 
-def step(title: str):
+# (name, title, service, finished-marker)
+STEPS: list[tuple[str, str, Callable[[int], object], Callable[[int], Path]]] = [
+    ("script", "Generate Script", script, settings.script_file),
+    ("voice", "Generate Voice", voice, settings.voice_file),
+    ("image", "Generate Images", image, image_done),
+    ("subtitle", "Generate Subtitle", subtitle, settings.subtitle_file),
+    ("timeline", "Generate Timeline", timeline, settings.timeline_file),
+    ("video", "Render Video", video, settings.video_file),
+    ("final", "Burn Subtitle", final_video, settings.final_video_file),
+    ("metadata", "Generate Metadata", metadata, settings.metadata_file),
+]
 
+STEP_NAMES = [name for name, *_ in STEPS]
+
+
+def banner(title: str):
     print()
     print("=" * 60)
     print(title)
@@ -28,140 +56,64 @@ def main():
         description="AI Content Factory Pipeline",
     )
 
+    parser.add_argument("id", type=int, help="Video ID")
+
     parser.add_argument(
-        "id",
-        type=int,
-        help="Video ID",
+        "--from",
+        dest="start",
+        choices=STEP_NAMES,
+        help="Re-run this step and every step after it.",
+    )
+
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-run every step, ignoring existing outputs.",
     )
 
     args = parser.parse_args()
 
+    redo_from = 0 if args.force else (
+        STEP_NAMES.index(args.start) if args.start else len(STEPS)
+    )
+
     start = time.time()
 
-    print()
-    print("=" * 60)
-    print("AI CONTENT FACTORY")
-    print("=" * 60)
+    banner("AI CONTENT FACTORY")
 
-    # ------------------------------------------------------------------
-    # 1. SCRIPT
-    # ------------------------------------------------------------------
+    total = len(STEPS) + 1
 
-    step("[1/9] Generate Script")
+    for number, (name, title, service, done) in enumerate(STEPS, start=1):
 
-    if not skip_file(
-        f"storage/scripts/{args.id}.json"
-    ):
-        script(args.id)
+        banner(f"[{number}/{total}] {title}")
 
-    # ------------------------------------------------------------------
-    # 2. VOICE
-    # ------------------------------------------------------------------
+        marker = done(args.id)
 
-    step("[2/9] Generate Voice")
+        if number - 1 < redo_from and marker.exists():
+            print(f"Status : SKIP ({marker})")
+            continue
 
-    if not skip_file(
-        f"storage/voices/{args.id}.mp3"
-    ):
-        voice(args.id)
+        step_start = time.time()
 
-    # ------------------------------------------------------------------
-    # 3. IMAGES
-    # ------------------------------------------------------------------
+        service(args.id)
 
-    step("[3/9] Generate Images")
+        print(f"Step time : {time.time() - step_start:.1f}s")
 
-    if not skip_directory(
-        f"storage/images/{args.id}"
-    ):
-        image(args.id)
-
-    # ------------------------------------------------------------------
-    # 4. SUBTITLE
-    # ------------------------------------------------------------------
-
-    step("[4/9] Generate Subtitle")
-
-    if not skip_file(
-        f"storage/subtitles/{args.id}.srt"
-    ):
-        subtitle(args.id)
-
-    # ------------------------------------------------------------------
-    # 5. TIMELINE
-    # ------------------------------------------------------------------
-
-    step("[5/9] Generate Timeline")
-
-    if not skip_file(
-        f"storage/timeline/{args.id}.json"
-    ):
-        timeline(args.id)
-
-    # ------------------------------------------------------------------
-    # 6. VIDEO
-    # ------------------------------------------------------------------
-
-    step("[6/9] Render Video")
-
-    if not skip_file(
-        f"storage/videos/{args.id}.mp4"
-    ):
-        video(args.id)
-
-    # ------------------------------------------------------------------
-    # 7. FINAL VIDEO
-    # ------------------------------------------------------------------
-
-    step("[7/9] Burn Subtitle")
-
-    if not skip_file(
-        f"storage/videos/{args.id}_final.mp4"
-    ):
-        final_video(args.id)
-
-    # ------------------------------------------------------------------
-    # 8. METADATA
-    # ------------------------------------------------------------------
-
-    step("[8/9] Generate Metadata")
-
-    if not skip_file(
-        f"storage/metadata/{args.id}.json"
-    ):
-        metadata(args.id)
-
-    # ------------------------------------------------------------------
-    # 9. QC
-    # ------------------------------------------------------------------
-
-    step("[9/9] Quality Check")
+    banner(f"[{total}/{total}] Quality Check")
 
     if not qc(args.id):
-        raise RuntimeError(
-            "Pipeline failed because QC did not pass."
-        )
+        print("Pipeline failed because QC did not pass.")
+        sys.exit(1)
 
-    elapsed = time.time() - start
+    banner("PIPELINE COMPLETED")
 
+    print(f"Elapsed Time : {time.time() - start:.2f} seconds")
     print()
-    print("=" * 60)
-    print("PIPELINE COMPLETED")
-    print("=" * 60)
-
-    print(f"Elapsed Time : {elapsed:.2f} seconds")
-    print()
-
     print("Outputs")
     print("-" * 60)
-    print(f"Script       : storage/scripts/{args.id}.json")
-    print(f"Voice        : storage/voices/{args.id}.mp3")
-    print(f"Images       : storage/images/{args.id}/")
-    print(f"Subtitle     : storage/subtitles/{args.id}.srt")
-    print(f"Timeline     : storage/timeline/{args.id}.json")
-    print(f"Video        : storage/videos/{args.id}.mp4")
-    print(f"Final Video  : storage/videos/{args.id}_final.mp4")
-    print(f"Metadata     : storage/metadata/{args.id}.json")
+
+    for name, _title, _service, done in STEPS:
+        print(f"{name:<12}: {done(args.id)}")
 
     print("=" * 60)
 

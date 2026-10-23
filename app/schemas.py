@@ -1,27 +1,42 @@
-from dataclasses import dataclass
+"""Data contracts shared by Gemini, the generators and the renderer.
+
+The same pydantic models are sent to Gemini as `response_schema`, so the
+model can only answer with JSON in exactly this shape.
+"""
+
+from pydantic import BaseModel
+from pydantic import Field
 
 
-@dataclass
-class Visual:
+class Visual(BaseModel):
 
-    prompt: str
+    prompt: str = Field(
+        description="Cinematic image prompt for one visual moment.",
+    )
 
-    duration: float
+    duration: float = Field(
+        default=1.5,
+        description="Relative weight of this visual inside its scene, 1.3-2.0.",
+    )
 
-@dataclass
-class Scene:
 
-    text: str
+class Scene(BaseModel):
 
-    keyword: str
+    text: str = Field(
+        description="One narrated sentence.",
+    )
+
+    keyword: str = Field(
+        description="One SEO search keyword for this scene.",
+    )
 
     visuals: list[Visual]
 
+    # Spoken length of the scene, filled in from the voice timings.
     duration: float = 0.0
 
 
-@dataclass
-class Script:
+class Script(BaseModel):
 
     title: str
 
@@ -30,85 +45,25 @@ class Script:
     cta: str
 
     @classmethod
-    def from_dict(
-        cls,
-        data: dict,
-    ):
+    def from_dict(cls, data: dict) -> "Script":
+        return cls.model_validate(data)
 
-        scenes = [
+    def to_dict(self) -> dict:
+        return self.model_dump()
 
-            Scene(
+    def narration(self) -> list[str]:
+        """Every spoken block in order: the scenes, then the CTA."""
+        return [scene.text for scene in self.scenes] + [self.cta]
 
-                text=item["text"],
 
-                keyword=item["keyword"],
+class YouTubeMetadata(BaseModel):
 
-                visuals=[
+    title: str = Field(
+        description="YouTube title, at most 60 characters.",
+    )
 
-                    Visual(
+    description: str
 
-                        prompt=v["prompt"],
-
-                        duration=v["duration"]
-
-                    )
-
-                    for v in item["visuals"]
-
-                ],
-
-                duration=item.get("duration",0.0)
-
-            )
-
-            for item in data["scenes"]
-
-        ]
-
-        return cls(
-
-            title=data["title"],
-
-            scenes=scenes,
-
-            cta=data["cta"],
-
-        )
-
-    def to_dict(self):
-
-        return {
-
-            "title": self.title,
-
-            "scenes": [
-
-                {
-                    "text":scene.text,
-
-                    "keyword":scene.keyword,
-
-                    "visuals":[
-
-                        {
-
-                            "prompt":v.prompt,
-
-                            "duration":v.duration
-
-                        }
-
-                        for v in scene.visuals
-
-                    ],
-
-                    "duration":scene.duration
-                }
-
-                for scene in self.scenes
-
-            ],
-
-            "cta": self.cta,
-
-        }
+    tags: list[str] = Field(
+        description="Exactly 10 YouTube tags.",
+    )

@@ -1,6 +1,6 @@
 import json
-from pathlib import Path
 
+from app import settings
 from app.generators.image_generator import ImageGenerator
 from app.schemas import Script
 from app.db import get_db
@@ -9,9 +9,7 @@ from app.models import Video
 
 def run(video_id: int):
 
-    script_path = Path(
-        f"storage/scripts/{video_id}.json"
-    )
+    script_path = settings.script_file(video_id)
 
     if not script_path.exists():
 
@@ -54,6 +52,4 @@ def run(video_id: int):
 
         db.commit()
 
-    return (
-        f"storage/images/{video_id}"
-    )
+    return str(settings.image_dir(video_id))
