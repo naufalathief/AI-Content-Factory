@@ -43,6 +43,53 @@ const STILL: Motion = {
 
 };
 
+// Subtle camera look over the whole video: moving film grain and a light
+// vignette make AI images read more like real footage.
+const FilmLook = () => {
+
+    const frame = useCurrentFrame();
+
+    return (
+
+        <AbsoluteFill style={{ pointerEvents: "none" }}>
+
+            <AbsoluteFill
+                style={{
+                    background:
+                        "radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.38) 100%)",
+                }}
+            />
+
+            <svg
+                width="100%"
+                height="100%"
+                style={{ opacity: 0.12, mixBlendMode: "overlay" }}
+            >
+
+                <filter id="grain">
+
+                    <feTurbulence
+                        type="fractalNoise"
+                        baseFrequency="0.85"
+                        numOctaves={2}
+                        seed={frame % 24}
+                        stitchTiles="stitch"
+                    />
+
+                    <feColorMatrix type="saturate" values="0" />
+
+                </filter>
+
+                <rect width="100%" height="100%" filter="url(#grain)" />
+
+            </svg>
+
+        </AbsoluteFill>
+
+    );
+
+};
+
 const asset = (path: string) => staticFile(path.replace(/^\/+/, ""));
 
 const KenBurns = (
@@ -170,6 +217,8 @@ export const Video = (
                 )
 
             }
+
+            <FilmLook />
 
         </AbsoluteFill>
 

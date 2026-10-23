@@ -40,9 +40,22 @@ STORYBOARD RULES
 
 For EVERY scene generate EXACTLY 3 visuals that follow the sentence in order.
 
-Each visual prompt must describe the subject, action, setting, camera angle
-and lighting in English, as a vertical 9:16 photorealistic frame with no text,
-logo or watermark.
+Write each visual prompt in English like a photographer's shot description of
+something that could really be photographed:
+
+- A concrete subject doing a concrete action (who/what, wearing/made of what).
+- A specific real location and time of day ("a fishing pier in Maine at dawn",
+  not "a beautiful place").
+- Shot type and camera angle (close-up, medium shot, low angle, over the
+  shoulder, aerial).
+- The light that is actually there (overcast daylight, golden hour sun,
+  fluorescent office light, campfire).
+- One or two small realistic details (dust, condensation, worn edges,
+  messy cables) that make it feel real.
+
+Do NOT use words like "ultra realistic", "8K", "masterpiece", "cinematic",
+"epic", "stunning" or "concept art", and never ask for text in the image.
+Keep the same people, places and objects consistent across a scene's visuals.
 
 Each visual duration is a relative weight between 1.3 and 2.0. The final
 timing is synced to the narration later, so do not try to match seconds.

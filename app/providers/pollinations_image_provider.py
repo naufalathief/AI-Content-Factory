@@ -39,7 +39,9 @@ def build_url(prompt: str) -> str:
         f"&model={MODEL}"
         f"&seed={seed}"
         "&nologo=true"
-        "&enhance=true"
+        # Our prompts are already detailed; letting Pollinations rewrite them
+        # tends to add "8K masterpiece" style words and a CGI look.
+        "&enhance=false"
         "&safe=false"
     )
 
